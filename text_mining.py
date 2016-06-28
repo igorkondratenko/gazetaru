@@ -6,6 +6,8 @@ import re
 import os
 import pymorphy2
 from stop_words import get_stop_words
+from gensim.models.word2vec import Word2Vec
+
 
 #connection to database
 connection = sql.connect(user='root',host='127.0.0.1',database='text_mining')
@@ -93,15 +95,21 @@ for file in files:
     n_files = n_files + 1
     print("Обработано: "+str(n_files)+" из "+str(len(files)))
 
+
+model = Word2Vec.load('ruwiki.word2vec.model')
+country_list = [item[0] for item in model.most_similar('швеция')]
+
 stop_words = get_stop_words('ru')
-#print (stop_words)
 cursor.execute("SELECT word,count(*) as c FROM stats GROUP BY word ORDER BY c desc LIMIT 100")
 for row in cursor:
     if (row[0] not in stop_words) and (re.compile('\d+').match(row[0])==None):
-        print (row[0]+": "+ str(row[1]))
+        if (row[0] in country_list):
+            #print (row[0]+": "+ str(row[1]))
+            president = model.most_similar(positive=[row[0], 'путин'], negative=['россия'], topn=1)
+            print (row[0]+": "+president[0])
     #break
     
-
 cursor.close()
 connection.close()
-print ("OK")
+
+#print(model.most_similar(positive=['россия', 'украина'], negative=['путин'], topn=5))
